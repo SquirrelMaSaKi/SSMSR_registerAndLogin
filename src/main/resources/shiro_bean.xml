@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--aop、tx事务、context注解和导入外部文件-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/aop
+                           http://www.springframework.org/schema/aop/spring-aop.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/tx
+                           http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <!--shiro的myRealm配置-->
+    <bean id="myRealm" class="com.rj.utils.MyRealm">
+        <!--Realm，这样在myRealm类中就可以不需要启动三个ContextLoader了-->
+        <property name="userService" ref="userService"/>
+        <property name="roleService" ref="roleService"/>
+        <property name="permissionService" ref="permissionService"/>
+        <!--身份验证匹配，主要是导入加密模式等数据-->
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <!--<property name="hashAlgorithmName" value="md5"/>-->
+                <property name="hashAlgorithmName" value="sha-256"/>
+                <!-- true means hex encoded, false means base64 encoded -->
+                <property name="storedCredentialsHexEncoded" value="false"/>
+                <property name="hashIterations" value="10000"/>
+            </bean>
+        </property>
+    </bean>
+
+    <bean id="shiroCacheManager" class="com.rj.cache.MyShiroManagerCache">
+        <property name="template" ref="redisTemplate"/>
+    </bean>
+
+    <!--自定义记住我的cookie的属性-->
+    <bean id="remembermecookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <property name="name" value="rememberMe"/>
+        <property name="httpOnly" value="true"/>
+        <!-- cookie的生命周期，单位：秒 -->
+        <property name="maxAge" value="300"/>
+    </bean>
+    <!--将自定义好的cookie注入CookieRememberMeManager管理类-->
+    <bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+        <property name="cookie" ref="remembermecookie"/>
+    </bean>
+
+    <!--自定义session会话管理，同样由SimpleCookie创建-->
+    <bean id="sessionCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <property name="name" value="sessionId"/>
+        <property name="httpOnly" value="true"/>
+        <!-- cookie过期时间，-1:存活一个会话 ,单位:秒,表示cookie结束的时候，会话也结束-->
+        <property name="maxAge" value="-1"/>
+    </bean>
+    <!--将自定义好的sessionCookie注入DefaultWebSessionManager管理类-->
+    <bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <property name="sessionDAO">
+            <bean class="com.rj.cache.MySessionDao">
+                <property name="template" ref="redisTemplate2"/>
+            </bean>
+        </property>
+
+        <!-- 默认值和配置中给出的一致，所bean:sessionIdCookie 可以省略 -->
+        <property name="sessionIdCookie" ref="sessionCookie"/>
+        <!-- session全局超时时间, 单位:毫秒 ，默认值为1800000，30分钟-->
+        <property name="globalSessionTimeout" value="10000"/>
+        <!--&lt;!&ndash;将监听器给到sessionManager中&ndash;&gt;-->
+        <!--<property name="sessionListeners">-->
+            <!--<list>-->
+                <!--<bean class="com.rj.listener.MySessionListener"/>-->
+            <!--</list>-->
+        <!--</property>-->
+        <!--&lt;!&ndash;开启检测器，默认开启，单位毫秒，默认1小时&ndash;&gt;-->
+        <!--<property name="sessionValidationSchedulerEnabled" value="true"/>-->
+        <!--<property name="sessionValidationInterval" value="40000"/>-->
+    </bean>
+
+    <!-- 声明SecurityManager核心组件，将自定义的realm注入到SecurityManager -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myRealm"/>
+        <property name="rememberMeManager" ref="rememberMeManager"/>
+        <property name="cacheManager" ref="shiroCacheManager"/>
+        <property name="sessionManager" ref="sessionManager"/>
+    </bean>
+
+    <!-- 生产SpringShiroFilter，注入SecurityManager核心组件，logout自定义-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <!--<property name="loginUrl" value="/user/login"/>-->
+        <!--<property name="unauthorizedUrl" value="/user/error"/>-->
+        <!--&lt;!&ndash;<property name="" value="/"/>&ndash;&gt;-->
+        <!--<property name="filterChainDefinitions">-->
+            <!--<value>-->
+                <!--/user/login = anon-->
+                <!--/user/all = authc,roles["管理员"]-->
+            <!--</value>-->
+        <!--</property>-->
+    </bean>
+</beans>

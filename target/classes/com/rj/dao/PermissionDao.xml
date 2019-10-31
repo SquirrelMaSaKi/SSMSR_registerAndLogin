@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rj.dao.PermissionDao">
+
+    <select id="findByUsername" resultType="java.lang.String">
+      select p.pername
+      from user u
+      inner join user_role ur
+      on u.uid=ur.uid
+      inner join role r
+      on ur.rid=r.rid
+      inner join role_permission rp
+      on r.rid=rp.rid
+      inner join permission p
+      on rp.pid=p.pid
+      where u.username like #{username}
+    </select>
+</mapper>

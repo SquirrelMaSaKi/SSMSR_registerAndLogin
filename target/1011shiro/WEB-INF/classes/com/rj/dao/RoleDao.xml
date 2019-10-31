@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rj.dao.RoleDao">
+    <select id="findByUsername" resultType="java.lang.String">
+      select r.rolename
+      from user u
+      inner join user_role ur
+      on u.uid=ur.uid
+      inner join role r
+      on ur.rid=r.rid
+      where u.username like #{username}
+    </select>
+</mapper>
